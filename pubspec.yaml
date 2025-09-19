@@ -1,0 +1,59 @@
+name: aeza_flutter_new
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0' # Используем более широкий диапазон для совместимости
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  image_picker: any
+  # Для сохранения изображений в галерею
+  image_gallery_saver: any
+  # Для запроса разрешений у пользователя
+  permission_handler: any
+  # Для создания уникальных имён файлов
+  uuid: any
+  # Firebase - основные сервисы (ПРАВИЛЬНОЕ МЕСТО)
+  firebase_core: any
+  firebase_auth: any
+  firebase_storage: any
+  cloud_firestore: any
+
+  # BLoC для управления состоянием (ДОБАВЛЕНО)
+  flutter_bloc: any
+  equatable: any
+
+  # Стандартные иконки
+  cupertino_icons: ^1.0.8
+  share_plus: ^12.0.0
+  path_provider: ^2.1.5
+  flutter_launcher_icons: ^0.14.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Инструменты для разработки
+  flutter_lints: ^3.0.0 # Оставим ^3.0.0, более новые версии могут быть строже
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
+    - assets/images/
+    - assets/fonts/
+  fonts:
+    - family: Press Start 2P
+      fonts:
+        - asset: assets/fonts/PressStart2P-Regular.ttf
+          weight: 400
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+  remove_alpha_ios: true
