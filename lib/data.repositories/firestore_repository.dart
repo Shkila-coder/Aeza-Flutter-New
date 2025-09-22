@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../data/models/drawing_model.dart';
+
 class FirestoreRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -25,20 +27,38 @@ class FirestoreRepository {
   }
 
   // Метод для получения всех рисунков текущего пользователя.
-  Future<List<String>> getUserDrawings() async {
+  Future<List<Drawing>> getUserDrawings() async {
     final user = _auth.currentUser;
     // Если пользователя нет, возвращаем пустой список.
     if (user == null) return [];
 
-    // Делаем запрос в Firestore: получаем все документы из подколлекции 'drawings' пользователя.
+    // Делаем запрос в Firestore, сортируем по дате.
     final snapshot = await _firestore
         .collection('users')
         .doc(user.uid)
         .collection('drawings')
-        .orderBy('createdAt', descending: true) // Сортируем по дате, чтобы новые были сверху.
+        .orderBy('createdAt', descending: true)
         .get();
 
-    // Преобразуем (map) список документов в список строк (base64Image).
-    return snapshot.docs.map((doc) => doc['imageData'] as String).toList();
+    // Преобразуем список документов в список объектов Drawing.
+    // Теперь мы получаем не только картинку, но и ее уникальный ID.
+    return snapshot.docs.map((doc) {
+      return Drawing(
+        id: doc.id, // Получаем ID документа
+        base64Image: doc['imageData'] as String, // Получаем данные изображения
+      );
+    }).toList();
+  }
+
+  Future<void> updateDrawing(String id, String newBase64Image) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('drawings')
+        .doc(id)
+        .update({'imageData': newBase64Image});
   }
 }

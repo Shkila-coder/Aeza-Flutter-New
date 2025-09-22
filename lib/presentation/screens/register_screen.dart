@@ -1,6 +1,6 @@
+import 'dart:developer' as developer;
 import 'dart:ui';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -37,7 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _signUp() {
     if (_formKey.currentState!.validate()) {
-      print('Форма валидна! Отправляем событие SignUpRequested...');
+      developer.log('Форма валидна! Отправляем событие SignUpRequested...');
       context.read<AuthBloc>().add(
         SignUpRequested(
           email: _emailController.text.trim(),
@@ -45,7 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       );
     }else {
-      print('Форма НЕ прошла валидацию!');
+      developer.log('Форма НЕ прошла валидацию!');
     }
 
   }
@@ -81,7 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Image.asset(
               'assets/images/pattern.png',
               fit: BoxFit.cover,
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withAlpha(38),
               colorBlendMode: BlendMode.modulate,
             ),
           ),
@@ -238,11 +238,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.background.withOpacity(0.5),
+            color: AppColors.background.withAlpha(128),
             borderRadius: BorderRadius.circular(8.0),
             border: Border.all(color: AppColors.textFieldBorder, width: 0.5),
           ),
-          child: TextFormField( // Заменяем TextField на TextFormField для валидации
+          child: TextFormField(
             controller: controller,
             obscureText: isObscure,
             style: const TextStyle(color: AppColors.text, fontSize: 16),

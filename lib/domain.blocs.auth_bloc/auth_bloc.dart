@@ -22,19 +22,43 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // Обработчик события LogInRequested: попытка входа.
     on<LogInRequested>((event, emit) async {
-      emit(AuthLoading()); // Сначала показываем состояние загрузки.
+      emit(AuthLoading());
       try {
+        // Вызываем метод входа. Предполагается, что в случае успеха
+        // он вернет объект пользователя, а в случае неудачи — выбросит исключение.
         final user = await authRepository.signIn(
-            email: event.email, password: event.password);
-        if (user != null) {
-          emit(Authenticated(user)); // В случае успеха — Authenticated.
-        }
+          email: event.email,
+          password: event.password,
+        );
+        emit(Authenticated(user!));
+
       } on FirebaseAuthException catch (e) {
-        // В случае ошибки Firebase — AuthFailure с сообщением об ошибке.
-        emit(AuthFailure(e.message ?? "Произошла ошибка аутентификации"));
+        // Обрабатываем конкретные ошибки Firebase для понятных сообщений.
+        String message = "Произошла ошибка входа.";
+        switch (e.code) {
+          case 'user-not-found':
+            message = 'Пользователь с таким email не найден.';
+            break;
+          case 'wrong-password':
+            message = 'Неверный пароль. Попробуйте еще раз.';
+            break;
+          case 'invalid-email':
+            message = 'Некорректный формат email адреса.';
+            break;
+          case 'user-disabled':
+            message = 'Этот аккаунт был отключен.';
+            break;
+          default:
+          // Используем сообщение от Firebase, если оно есть
+            message = e.message ?? 'Произошла неизвестная ошибка.';
+        }
+        emit(AuthFailure(message));
+
+      } catch (e) {
+        // Ловим все остальные возможные ошибки (например, отсутствие интернета).
+        emit(const AuthFailure('Не удалось подключиться. Проверьте интернет-соединение.'));
       }
     });
-
     // Обработчик события SignUpRequested: попытка регистрации.
     on<SignUpRequested>((event, emit) async {
       emit(AuthLoading());

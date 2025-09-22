@@ -55,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Image.asset(
                 'assets/images/pattern.png',
                 fit: BoxFit.cover,
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withAlpha(38),
                 colorBlendMode: BlendMode.modulate,
               ),
             ),
@@ -208,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Container(
           padding: const EdgeInsets.all(16.0),
           decoration: BoxDecoration(
-            color: AppColors.background.withOpacity(0.5),
+            color: AppColors.background.withAlpha(128),
             borderRadius: BorderRadius.circular(8.0),
             border: Border.all(color: AppColors.textFieldBorder, width: 0.5),
           ),

@@ -1,3 +1,4 @@
+// lib/presentation/screens/editor_screen.dart
 import 'dart:io';
 import 'dart:ui';
 import 'package:aeza_flutter_new/presentation/theme/app_colors.dart';
@@ -16,6 +17,8 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:developer' as developer;
 
+import '../../data/models/drawing_model.dart';
+
 // Класс для хранения информации о точке на холсте
 class DrawingPoint {
   final Offset offset;
@@ -26,11 +29,11 @@ class DrawingPoint {
 // Экран редактора
 class EditorScreen extends StatefulWidget {
   // Добавляем необязательное поле для хранения начального изображения
-  final String? initialBase64Image;
+  final Drawing? initialDrawing;
 
   const EditorScreen({
     super.key,
-    this.initialBase64Image, // Добавляем его в конструктор
+    this.initialDrawing, // Добавляем его в конструктор
   });
 
   @override
@@ -76,10 +79,10 @@ class _EditorScreenState extends State<EditorScreen> {
     super.didChangeDependencies();
     // --- ОТЛАДКА ---
     developer.log('--- ЭКРАН РЕДАКТОРА: didChangeDependencies ВЫЗВАН ---');
-    developer.log('widget.initialBase64Image == null ? ${widget.initialBase64Image == null}');
+    developer.log('widget.initialBase64Image == null ? ${widget.initialDrawing!.base64Image}');
     developer.log('_isInitialImageLoaded = $_isInitialImageLoaded');
 
-    if (widget.initialBase64Image != null && !_isInitialImageLoaded) {
+    if (widget.initialDrawing != null && !_isInitialImageLoaded){
       developer.log('Условие выполнено: вызываем _loadInitialImage()');
       _loadInitialImage();
       _isInitialImageLoaded = true;
@@ -89,7 +92,7 @@ class _EditorScreenState extends State<EditorScreen> {
   Future<void> _loadInitialImage() async {
     developer.log('--- ЭКРАН РЕДАКТОРА: _loadInitialImage НАЧАЛСЯ ---');
     try {
-      final imageBytes = base64Decode(widget.initialBase64Image!);
+      final imageBytes = base64Decode(widget.initialDrawing!.base64Image);
       developer.log('Base64 успешно декодирован. Длина: ${imageBytes.length} байт');
       final image = await decodeImageFromList(imageBytes);
       developer.log('Байты успешно декодированы в картинку ui.Image. Размеры: ${image.width}x${image.height}');
@@ -137,53 +140,81 @@ class _EditorScreenState extends State<EditorScreen> {
   Future<void> _saveImage() async {
     setState(() => _isSaving = true);
     try {
+      // 1. Получаем изображение с холста
       RenderRepaintBoundary boundary = _canvasKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
       final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       final String base64Image = base64Encode(pngBytes);
-      await _firestoreRepository.saveDrawing(base64Image);
 
-      await ImageGallerySaver.saveImage(pngBytes, name: "aeza_drawing_${DateTime.now().toIso8601String()}");
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Изображение успешно сохранено!'), backgroundColor: Colors.green),
-        );
-        Navigator.of(context).pop(true);
+      // 2. Сохраняем в Firestore (создаем новый или обновляем существующий)
+      if (widget.initialDrawing == null) {
+        // Если это новый рисунок, сохраняем его
+        await _firestoreRepository.saveDrawing(base64Image);
+      } else {
+        // Если это существующий рисунок, обновляем его по ID
+        await _firestoreRepository.updateDrawing(widget.initialDrawing!.id, base64Image);
       }
+
+      // 3. Сохраняем в локальную галерею устройства
+      await ImageGallerySaver.saveImage(pngBytes, name: "artify_drawing_${DateTime.now().toIso8601String()}");
+
+      // 4. Показываем результат пользователю
+      // Эта проверка необходима, чтобы избежать ошибки, если пользователь покинул экран
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Изображение успешно сохранено!'), backgroundColor: Colors.green),
+      );
+      Navigator.of(context).pop(true);
+
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Произошла ошибка: $e'), backgroundColor: Colors.red),
-        );
-      }
+      // Правильная логика: если виджет не смонтирован, просто выходим из функции.
+      if (!mounted) return;
+
+      // Если же он смонтирован, то безопасно показываем ошибку.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Произошла ошибка: $e'), backgroundColor: Colors.red),
+      );
+
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      // В любом случае убираем индикатор загрузки
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
-  Future<void> _shareImage() async {
+  Future<void> _shareImage(BuildContext context) async {
     // Показываем индикатор загрузки
     setState(() => _isSharing = true);
 
+    // --- ИСПРАВЛЕНИЕ ---
+    // Сначала безопасно получаем положение кнопки, ДО всех асинхронных операций.
+    final box = context.findRenderObject() as RenderBox?;
+    final Rect? sharePositionOrigin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+
     try {
-      // 1. Получаем байты изображения с холста (точно так же, как при сохранении)
+      // 1. Вся асинхронная работа теперь идет после того, как мы использовали context.
       RenderRepaintBoundary boundary = _canvasKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
       final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final Uint8List pngBytes = byteData!.buffer.asUint8List();
 
-      // 2. Находим временную папку на устройстве
+      // 2. Сохраняем изображение во временный файл
       final tempDir = await getTemporaryDirectory();
       final file = await File('${tempDir.path}/image.png').create();
-
-      // 3. Записываем байты нашего изображения во временный файл
       await file.writeAsBytes(pngBytes);
 
-      // 4. Вызываем нативный диалог "Поделиться" с путем к нашему файлу
-      await Share.shareXFiles([XFile(file.path)], text: 'Мой рисунок из Flutter приложения!');
+      // 3. Вызываем диалог "Поделиться", используя заранее полученные координаты
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Мой рисунок из Flutter приложения!',
+        sharePositionOrigin: sharePositionOrigin,
+      );
 
     } catch (e) {
       developer.log('Ошибка при экспорте: $e');
@@ -365,7 +396,16 @@ class _EditorScreenState extends State<EditorScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          IconButton(icon: Image.asset('assets/icons/download_icon.png'), onPressed: _shareImage),
+          Builder(
+            builder: (BuildContext context) {
+              return IconButton(
+                icon: _isSharing
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Image.asset('assets/icons/download_icon.png'),
+                onPressed: _isSharing ? null : () => _shareImage(context),
+              );
+            },
+          ),
           IconButton(icon: Image.asset('assets/icons/image_icon.png'), onPressed: _pickImage),
           IconButton(
               icon: Image.asset('assets/icons/brush_icon.png'),
@@ -392,7 +432,7 @@ class _EditorScreenState extends State<EditorScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.background.withOpacity(0.7),
+        color: AppColors.background.withAlpha(179),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

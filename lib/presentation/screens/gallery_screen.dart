@@ -7,8 +7,8 @@ import 'package:aeza_flutter_new/presentation/widgets/app_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:convert';
-import 'dart:developer' as developer;
 import '../../data.repositories/firestore_repository.dart';
+import '../../data/models/drawing_model.dart';
 import '../../domain.blocs.auth_bloc/auth_bloc.dart';
 import '../../domain.blocs.auth_bloc/auth_event.dart';
 
@@ -22,7 +22,7 @@ class GalleryScreen extends StatefulWidget {
 
 class _GalleryScreenState extends State<GalleryScreen> {
   // Переменная для хранения "будущего" списка картинок, которые придут из Firestore.
-  late Future<List<String>> _imagesFuture;
+  late Future<List<Drawing>> _imagesFuture;
 
   @override
   void initState() {
@@ -40,21 +40,18 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   // Метод для навигации на экран редактора и обновления галереи после возвращения.
-  void _navigateToEditorAndRefresh([String? imageToEdit]) async {
-    // Переходим на экран редактора и ждем, когда он закроется.
+  void _navigateToEditorAndRefresh([Drawing? drawingToEdit]) async {
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) => EditorScreen(
-          // Передаем изображение для редактирования. Если это новый рисунок, передаем null.
-          initialBase64Image: imageToEdit,
+          // Передаем весь объект Drawing в редактор
+          initialDrawing: drawingToEdit,
         ),
       ),
     );
 
-    // Если редактор вернул 'true', это значит, что рисунок был сохранен.
     if (result == true) {
-      // Обновляем галерею, чтобы показать новый рисунок.
       _loadImages();
     }
   }
@@ -67,7 +64,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         children: [
           const AppBackground(),
           // FutureBuilder асинхронно строит UI на основе _imagesFuture.
-          FutureBuilder<List<String>>(
+          FutureBuilder<List<Drawing>>(
             future: _imagesFuture,
             builder: (context, snapshot) {
               // Пока данные загружаются, показываем индикатор.
@@ -79,31 +76,29 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 return Center(child: Text('Ошибка загрузки: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
               }
               // Если данных нет, показываем сообщение.
-              final images = snapshot.data ?? [];
-              if (images.isEmpty) {
+              final drawings = snapshot.data ?? [];
+              if (drawings.isEmpty) {
                 return const Center(
                   child: Text('Ваша галерея пуста', style: TextStyle(color: Colors.grey, fontSize: 18)),
                 );
               }
-              // Если все успешно, строим сетку с изображениями.
-              return GridView.builder(
+
+              // Если все успешно, строим и ВОЗВРАЩАЕМ сетку с изображениями.
+              return GridView.builder( // <-- ДОБАВЛЕНО СЛОВО RETURN
                 padding: const EdgeInsets.only(top: 120, left: 16, right: 16, bottom: 100),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, // Два элемента в ряду.
+                  crossAxisCount: 2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
                 ),
-                itemCount: images.length,
+                itemCount: drawings.length,
                 itemBuilder: (context, index) {
-                  final base64Image = images[index];
-                  // Декодируем строку Base64 в байты для отображения.
-                  final Uint8List imageBytes = base64Decode(base64Image);
+                  final drawing = drawings[index];
+                  final Uint8List imageBytes = base64Decode(drawing.base64Image);
 
-                  // Оборачиваем каждую картинку в GestureDetector, чтобы на нее можно было нажать.
                   return GestureDetector(
                     onTap: () {
-                      // При нажатии переходим в редактор с этой картинкой.
-                      _navigateToEditorAndRefresh(base64Image);
+                      _navigateToEditorAndRefresh(drawing);
                     },
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),

@@ -4,41 +4,40 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.3.0 <4.0.0' # Используем более широкий диапазон для совместимости
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  image_picker: any
-  # Для сохранения изображений в галерею
-  image_gallery_saver: any
-  # Для запроса разрешений у пользователя
-  permission_handler: any
-  # Для создания уникальных имён файлов
-  uuid: any
-  # Firebase - основные сервисы (ПРАВИЛЬНОЕ МЕСТО)
-  firebase_core: any
-  firebase_auth: any
-  firebase_storage: any
-  cloud_firestore: any
+  # Firebase
+  firebase_core: ^3.1.1
+  firebase_auth: ^5.1.1
+  cloud_firestore: ^5.1.0
+  firebase_storage: ^12.1.0
+  # State Management
+  flutter_bloc: ^8.1.6
+  equatable: ^2.0.5
 
-  # BLoC для управления состоянием (ДОБАВЛЕНО)
-  flutter_bloc: any
-  equatable: any
+  # Image
+  image_picker: ^1.1.2
+  image_gallery_saver: ^2.0.3
 
-  # Стандартные иконки
+  # Utils
+  permission_handler: ^11.3.1
+  uuid: ^4.4.0
+  share_plus: ^9.0.0
+  path_provider: ^2.1.3
+
+  # Icons
   cupertino_icons: ^1.0.8
-  share_plus: ^12.0.0
-  path_provider: ^2.1.5
-  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # Инструменты для разработки
-  flutter_lints: ^3.0.0 # Оставим ^3.0.0, более новые версии могут быть строже
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true

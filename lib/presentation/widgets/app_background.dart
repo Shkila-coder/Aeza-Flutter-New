@@ -20,7 +20,7 @@ class AppBackground extends StatelessWidget {
           child: Image.asset(
             'assets/images/pattern.png',
             fit: BoxFit.cover,
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withAlpha(38),
             colorBlendMode: BlendMode.modulate,
           ),
         ),

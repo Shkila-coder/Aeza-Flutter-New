@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -28,7 +29,7 @@ class StorageRepository {
       return await snapshot.ref.getDownloadURL();
     } on FirebaseException catch (e) {
       // Обрабатываем возможные ошибки Firebase при загрузке.
-      print('Ошибка при загрузке изображения: $e');
+      developer.log('Ошибка при загрузке изображения: $e');
       rethrow;
     }
   }
